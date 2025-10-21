@@ -7,13 +7,24 @@ on:
 
 jobs:
   test-magic-link:
+    name: Test Magic Link - ${{ matrix.environment }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - environment: Production
+            email: edc34134c9@nosnch.in
+            secret_name: KEYCLOAK_CLIENT_SECRET_PROD
+          - environment: Staging
+            email: e8844fa3cb@nosnch.in
+            secret_name: KEYCLOAK_CLIENT_SECRET_STAGING
 
     steps:
       - name: Get JWT Token
         id: get_token
         env:
-          CLIENT_SECRET: ${{ secrets.KEYCLOAK_CLIENT_SECRET }}
+          CLIENT_SECRET: ${{ secrets[matrix.secret_name] }}
         run: |
           response=$(curl -s 'https://keycloak-ilifu.openup.org.za/realms/agari/protocol/openid-connect/token' \
             --data-raw "client_id=dms&client_secret=${CLIENT_SECRET}&grant_type=client_credentials")
@@ -28,5 +39,5 @@ jobs:
           curl -v -X POST https://folio-ilifu.openup.org.za/users/ \
             -H "Content-Type: application/json" \
             -H "Authorization: Token ${TOKEN}" \
-            -d '{"email":"edc34134c9@nosnch.in","redirect_uri":"https://agari.openup.org.za","expiration_seconds":3600,"send_email":true}'
+            -d '{"email":"${{ matrix.email }}","redirect_uri":"https://agari.openup.org.za","expiration_seconds":3600,"send_email":true}'
 
