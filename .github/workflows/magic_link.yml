@@ -28,24 +28,17 @@ jobs:
     steps:
       - name: Get JWT Token
         id: get_token
-        env:
-          CLIENT_SECRET: ${{ secrets[matrix.secret_name] }}
-          KEYCLOAK_HOSTNAME: ${{ matrix.keycloak_hostname }}
         run: |
-          response=$(curl -s "${KEYCLOAK_HOSTNAME}/realms/agari/protocol/openid-connect/token" \
-            --data-raw "client_id=dms&client_secret=${CLIENT_SECRET}&grant_type=client_credentials")
+          response=$(curl -s "${{ matrix.keycloak_hostname}}/realms/agari/protocol/openid-connect/token" \
+            --data-raw "client_id=dms&client_secret=${{secrets[matrix.secret_name]}}&grant_type=client_credentials")
 
           access_token=$(echo "$response" | jq -r '.access_token')
           echo "access_token=$access_token" >> $GITHUB_OUTPUT
 
       - name: Test Magic Link Login
-        env:
-          TOKEN: ${{ steps.get_token.outputs.access_token }}
-          REDIRECT_URI: ${{ matrix.redirect_uri }}
-          FOLIO_HOSTNAME: ${{ matrix.folio_hostname }}
         run: |
-          curl -v -X POST ${FOLIO_HOSTNAME}/users/ \
+          curl -v -X POST ${{matrix.folio_hostname}}/users/ \
             -H "Content-Type: application/json" \
-            -H "Authorization: Token ${TOKEN}" \
-            -d '{"email":"${{ matrix.email }}","redirect_uri":"${REDIRECT_URI}","expiration_seconds":3600,"send_email":true}'
+            -H "Authorization: Token ${{steps.get_token.outputs.access_token}}" \
+            -d '{"email":"${{ matrix.email }}","redirect_uri":"${{matrix.redirect_uri}}","expiration_seconds":3600,"send_email":true}'
 
