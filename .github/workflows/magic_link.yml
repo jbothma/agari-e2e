@@ -16,17 +16,23 @@ jobs:
           - environment: Production
             email: edc34134c9@nosnch.in
             secret_name: KEYCLOAK_CLIENT_SECRET_PROD
+            keycloak_hostname: https://keycloak-ilifu.openup.org.za
+            redirect_uri: https://agari.openup.org.za
+            folio_hostname: https://folio.openup.org.za
           - environment: Staging
             email: e8844fa3cb@nosnch.in
             secret_name: KEYCLOAK_CLIENT_SECRET_STAGING
-
+            keycloak_hostname: https://keycloak-staging.openup.org.za
+            redirect_uri: https://agari-staging.openup.org.za
+            folio_hostname: https://folio-staging.openup.org.za
     steps:
       - name: Get JWT Token
         id: get_token
         env:
           CLIENT_SECRET: ${{ secrets[matrix.secret_name] }}
+          KEYCLOAK_HOSTNAME: ${{ matrix.keycloak_hostname }}
         run: |
-          response=$(curl -s 'https://keycloak-ilifu.openup.org.za/realms/agari/protocol/openid-connect/token' \
+          response=$(curl -s '${KEYCLOAK_HOSTNAME}/realms/agari/protocol/openid-connect/token' \
             --data-raw "client_id=dms&client_secret=${CLIENT_SECRET}&grant_type=client_credentials")
 
           access_token=$(echo "$response" | jq -r '.access_token')
@@ -35,9 +41,11 @@ jobs:
       - name: Test Magic Link Login
         env:
           TOKEN: ${{ steps.get_token.outputs.access_token }}
+          REDIRECT_URI: ${{ matrix.redirect_uri }}
+          FOLIO_HOSTNAME: ${{ matrix.folio_hostname }}
         run: |
-          curl -v -X POST https://folio-ilifu.openup.org.za/users/ \
+          curl -v -X POST ${FOLIO_HOSTNAME}/users/ \
             -H "Content-Type: application/json" \
             -H "Authorization: Token ${TOKEN}" \
-            -d '{"email":"${{ matrix.email }}","redirect_uri":"https://agari.openup.org.za","expiration_seconds":3600,"send_email":true}'
+            -d '{"email":"${{ matrix.email }}","redirect_uri":"${REDIRECT_URI}","expiration_seconds":3600,"send_email":true}'
 
